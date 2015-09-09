@@ -7,37 +7,93 @@
   <body>
   <div class="container">
     <h1>Signature crypto experiment</h1>
-    <form class="form-inline" id="form">
+    <form class="form-inline" id="keypair-form">
+      <div class="form-group">
+        <input id="privateKey" class="form-control" type="text" name="privateKey" placeholder="private key">
+        <input id="publicKey" class="form-control" type="text" name="publicKey" placeholder="public key">
+        <input class="btn btn-primary" type="submit" value="generateKeypair">
+        <input class="btn btn-primary" type="submit" value="load defaults" onClick="loadKeypair(defaultPublicKey, defaultPrivateKey); return false;">
+      </div>
+    </form>
+    <hr>
+    <form class="form-inline" id="signing-form">
       <div class="form-group">
         <input class="form-control" type="text" name="text" placeholder="Text to sign">
         <input class="btn btn-primary" type="submit" value="Sign">
+        <input id="signature" class="form-control" type="text" name="signature">
+      </div>
+    </form>
+    <hr>
+    <form class="form-inline" id="verify-form">
+      <div class="form-group">
+        <input class="form-control" type="text" name="text" placeholder="Text to verify">
+        <input class="form-control" type="text" name="signature" placeholder="Signature">
+        <input class="btn btn-primary" type="submit" value="Verify">
+        <input id="is-valid" class="form-control" type="text" disabled=true>
       </div>
     </form>
     <hr>
     <div class="row">
       <textarea id="results" style="font-family:Monaco,monospace;font-size:12px"
-        class="form-control col-md-6" rows="20"></textarea>
+        class="form-control col-md-6" rows="20" disabled=true></textarea>
     </div>
   </div>
   <script type="text/javascript" charset="utf-8" src="webcrypto.js"></script>
   <script type="text/javascript" charset="utf-8">
+    function loadKeypair(publicKey, privateKey) {
+      console.log(publicKey, privateKey);
+      document.getElementById('publicKey').value = JSON.stringify(publicKey);
+      document.getElementById('privateKey').value = JSON.stringify(privateKey);
+    }
+
     function main() {
-      // And this is where the fun happens !
-      document.getElementById("form")
+      // Handle keypair generation.
+      document.getElementById("keypair-form")
+        .addEventListener("submit", function(event) {
+            event.preventDefault();
+            generateAndExportKeypair()
+            .then(keypair => {
+              output("generated keypair");
+              loadKeypair(keypair.publicKey, keypair.privateKey);
+            })
+            .catch(err => { output(err) });
+        });
+
+      // Handle signing.
+      document.getElementById("signing-form")
         .addEventListener("submit", function(event) {
           event.preventDefault();
-          var text = event.target.text.value;
 
+          // Get the values from the form.
+          var text = event.target.text.value;
+          var privateKey = JSON.parse(document.getElementById('privateKey').value);
+
+          // Create the signature.
           createSignature(text, privateKey)
           .then(signature => {
+            document.getElementById('signature').value = signature;
             output(signature);
-            return verifySignature(signature, text, publicKey);
           })
+          .catch(err => { output(err) })
+
+      });
+
+      // Handle verification.
+      document.getElementById("verify-form")
+        .addEventListener("submit", function(event) {
+          event.preventDefault();
+
+          // Get the values from the form.
+          var text = event.target.text.value;
+          var signature = event.target.signature.value;
+          var publicKey = JSON.parse(document.getElementById('publicKey').value);
+
+          verifySignature(signature, text, publicKey)
           .then(isValid => {
             output("Is the signature valid?" + isValid);
-          })
-          .catch(err => { console.log(err) })
+            document.getElementById('is-valid').value = isValid? "Valid signature" : "Invalid signature";
 
+          });
       });
     }
 
@@ -45,6 +101,37 @@
       var div = document.getElementById("results");
       div.innerHTML = div.innerHTML + text + "\n";
     }
+
+    // Generate the following keys with this quick code snippet.
+    // generateAndExportKeypair()
+    // .then(keyData => {
+    //   console.log(keyData);
+    //    console.log(JSON.stringify(keyData.publicKey));
+    //    console.log(JSON.stringify(keyData.privateKey));
+    // })
+    // .catch(error => { console.log(error); });
+
+    var defaultPublicKey = {
+      "alg":"RS256",
+      "e":"AQAB",
+      "ext":true,
+      "key_ops":["verify"],
+      "kty":"RSA",
+      "n":"w3GOsTNvBN2J3B4SbUlnZJExvuIONYZoIQV7ednv51Gbi9fzEf_gU-4Dh-DdHsBVahhJsirnGg5TI5E2MTyNk_ZQniAE643kFSn_8bZ8FW0_1GP0XkqTR0rQJgSGdycjx6hFpo-3b0t1qifBBxio3SvxAt9lmLU0PlFZYiXrd4YhkHZ5i70bkIa3iJ9F9oJNj7Q7zs43xJ5x7_XTL7nn84z0qaC-VtJyU-SeEi_p5qnhGvWbb4HNiQyK_-Ww1giEUUscd86NkmlqJ8d58ySayVSN2zbKfbWoXNXyMjX8MhiAGUpP5hYmWv_euysDbTS8KSdszEIhA3MNsdxqua8CMw"}
+
+    var defaultPrivateKey = {
+      "alg":"RS256",
+      "e":"AQAB",
+      "ext":true,
+      "key_ops":["sign"],
+      "kty":"RSA",
+      "d":"OklujchSDrhnOd86DZ-7lxF6LXxLUokwGtEAvxlQ48LBydXwZujRpRYxtV9JcrdXgdmWeO00mN-2yb-v0sVFT-BAsLfJ39okMG-jJhoPLXC0fYoFwe0puTRFmWD2HSjuEchMZV0tDqMJh2JtvckL61IEgZ_QM9euqfsm1g-LBszTNAUIVpdkQASfSXZGTOplY15YzmBdbel8rUKvRB1okwdeIdm34CBIBGML58Rd8pkpaLD6aFmOqyDm83tGy5j8uzUtb5eBd3VmEDyJNMQ1YOZMqWOZEtYEhsFdjQfjkHf2lTCvVRKUEA-tg8dhal62vU1Qvc6jUEmP6fzbvJDMGQ",
+      "dp":"5DbIeA-zGGF3FOD_4Zgyl3F5zz7jussirx9Mo3VMlD1uvu33VkPwFp2Eow30J5dw1I1JIkO3mCNVD-4A2L1Bv2NcgynjblNA48tvrPtV7NYUq-Hb9JQg3SkyIDAA5Rh0jz_SFo98cZS_PP27CmecOpMxpQvbhnmzZh288bxbTME",
+      "dq":"xzGYkAvna0_OCS3MtLt7PXxwWEop02XHFz9UCekYmx6WTIt06MNgtpRpj07WLju7KUcCy4Xy2Wxe6XH-cDaqIr9si4O6kry9jkRnX8qnM_Oyd7QqIQZ8O-JtrEgApBa-XOkVnOv_pQhxeVrgxLkYDOfxMvu_zsm8-UMJ37025kk",
+      "n":"w3GOsTNvBN2J3B4SbUlnZJExvuIONYZoIQV7ednv51Gbi9fzEf_gU-4Dh-DdHsBVahhJsirnGg5TI5E2MTyNk_ZQniAE643kFSn_8bZ8FW0_1GP0XkqTR0rQJgSGdycjx6hFpo-3b0t1qifBBxio3SvxAt9lmLU0PlFZYiXrd4YhkHZ5i70bkIa3iJ9F9oJNj7Q7zs43xJ5x7_XTL7nn84z0qaC-VtJyU-SeEi_p5qnhGvWbb4HNiQyK_-Ww1giEUUscd86NkmlqJ8d58ySayVSN2zbKfbWoXNXyMjX8MhiAGUpP5hYmWv_euysDbTS8KSdszEIhA3MNsdxqua8CMw",
+      "p":"62a_ZiY1q19o2Xsm4mCnSprrkRYwUzkLITVtJ4a8q4YKK9MXazCyz4LJAvnXFeaywH31v3SYxWDymprrE0Sis8FzOsFtwa_dJstomZsOR7xxundL1u9CqhsCS052D3IEajIINou2gvAk8mKaXiIQxTQTDROqNAvWWnPLtv704kU",
+      "q":"1Iu2DKfz03t2ZIPvI23Rp9YtZrGiID3_SZE-iszG8vFASLKY96YCm-fK7nqyNmRwQeWs0RrAfk31yZ6RW0SD8ub45Kzyxct776tlXf0x5M2ghDQ5gct4svxsB6BKExH_2Tfpe_9Air7bHLX31DoSdt87P4ZOK1qYXLJni5d11hc",
+      "qi":"Y16hgpV-Cr4IujX0C_1NxeZa_HyDapgRcglGbn3PgJIWvSg0EkPJtHa7WYZEP-mD8b-BVGDFD8uimadFAEPU23j_AUn0scq-fPXwTDFHmv8QgadF4oAcR5Ji1b5TTuhFpW136tOGme7mBX4UzxaPSIQ458sk6dAt67egAZkz4wU"}
 
     window.addEventListener("DOMContentLoaded", main);
   </script>
