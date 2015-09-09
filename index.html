@@ -2,6 +2,52 @@
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <title>Web Crypto experiments</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
   </head>
-<script type="text/javascript" charset="utf-8" src="webcrypto.js"></script>
+  <body>
+  <div class="container">
+    <h1>Signature crypto experiment</h1>
+    <form class="form-inline" id="form">
+      <div class="form-group">
+        <input class="form-control" type="text" name="text" placeholder="Text to sign">
+        <input class="btn btn-primary" type="submit" value="Sign">
+      </div>
+    </form>
+    <hr>
+    <div class="row">
+      <textarea id="results" style="font-family:Monaco,monospace;font-size:12px"
+        class="form-control col-md-6" rows="20"></textarea>
+    </div>
+  </div>
+  <script type="text/javascript" charset="utf-8" src="webcrypto.js"></script>
+  <script type="text/javascript" charset="utf-8">
+    function main() {
+      // And this is where the fun happens !
+      var text = "this is something to sign";
+      document.getElementById("form")
+        .addEventListener("submit", function(event) {
+          event.preventDefault();
+          event.target.text.value;
+
+          createSignature(text, privateKey)
+          .then(signature => {
+            output(signature);
+            return verifySignature(signature, text, publicKey);
+          })
+          .then(isValid => {
+            output("Is the signature valid?" + isValid);
+          })
+          .catch(err => { console.log(err) })
+
+      });
+    }
+
+    function output(text) {
+      var div = document.getElementById("results");
+      div.innerHTML = div.innerHTML + text + "\n";
+    }
+
+    window.addEventListener("DOMContentLoaded", main);
+  </script>
+  </body>
 </html>

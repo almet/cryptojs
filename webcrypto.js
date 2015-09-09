@@ -187,16 +187,3 @@ var privateKey = {
   "qi":"Y16hgpV-Cr4IujX0C_1NxeZa_HyDapgRcglGbn3PgJIWvSg0EkPJtHa7WYZEP-mD8b-BVGDFD8uimadFAEPU23j_AUn0scq-fPXwTDFHmv8QgadF4oAcR5Ji1b5TTuhFpW136tOGme7mBX4UzxaPSIQ458sk6dAt67egAZkz4wU"}
 
 
-// And this is where the fun happens !
-
-var text = "this is something to sign";
-
-createSignature(text, privateKey)
-.then(signature => {
-  console.log(signature);
-  return verifySignature(signature, text, publicKey);
-})
-.then(isValid => {
-  console.log('Is the signature valid?', isValid);
-})
-.catch(err => { console.log(err) })
